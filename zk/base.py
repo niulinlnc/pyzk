@@ -6,11 +6,11 @@ from socket import AF_INET, SOCK_DGRAM, SOCK_STREAM, socket, timeout
 from struct import pack, unpack
 import codecs
 
-from zk import const
-from zk.attendance import Attendance
-from zk.exception import ZKErrorResponse, ZKNetworkError
-from zk.user import User
-from zk.finger import Finger
+from . import const
+from .attendance import Attendance
+from .exception import ZKErrorResponse, ZKNetworkError
+from .user import User
+from .finger import Finger
 
 def safe_cast(val, to_type, default=None):
     #https://stackoverflow.com/questions/6330071/safe-casting-in-python
@@ -398,13 +398,14 @@ class ZK(object):
         cmd_response = self.__send_command(command, command_string, response_size)
         if cmd_response.get('status'):
             serialnumber = self.__data.split(b'=', 1)[-1].split(b'\x00')[0]
-            return serialnumber.decode() # string?
+            serialnumber = serialnumber.replace(b'=', b'') #去掉当中的=
+            return serialnumber.decode() # string? 
         else:
-            raise ZKErrorResponse("can't read serial number")
+            raise ZKErrorResponse("Can't read serial number")
 
     def get_platform(self):
         '''
-        return the serial number
+        return the platform name
         '''
         command = const.CMD_OPTIONS_RRQ
         command_string = b'~Platform'
@@ -413,13 +414,14 @@ class ZK(object):
         cmd_response = self.__send_command(command, command_string, response_size)
         if cmd_response.get('status'):
             platform = self.__data.split(b'=', 1)[-1].split(b'\x00')[0]
+            platform = platform.replace(b'=', b'')
             return platform.decode()
         else:
-            raise ZKErrorResponse("can't get platform")
+            raise ZKErrorResponse("Can't get platform")
 
     def get_mac(self):
         '''
-        return the serial number
+        return the mac
         '''
         command = const.CMD_OPTIONS_RRQ
         command_string = b'MAC'
@@ -434,7 +436,7 @@ class ZK(object):
 
     def get_device_name(self):
         '''
-        return the serial number
+        return the device name
         '''
         command = const.CMD_OPTIONS_RRQ
         command_string = b'~DeviceName'
@@ -474,7 +476,8 @@ class ZK(object):
         cmd_response = self.__send_command(command, command_string, response_size)
         if cmd_response.get('status'):
             response = self.__data.split(b'=', 1)[-1].split(b'\x00')[0]
-            return safe_cast(response, int, 0) if response else 0
+            response = response.replace(b'=', b'')
+            return safe_cast(response, int, 0)  if response else 0
         else:
             return None
 
@@ -492,7 +495,7 @@ class ZK(object):
             #definitivo? seleccionar firmware aqui?
             return safe_cast(fmt, int, 0) if fmt else 0
         else:
-            raise ZKErrorResponse("can't read extend fmt")
+            raise ZKErrorResponse("Can't read extend fmt")
 
     def get_user_extend_fmt(self):
         '''
@@ -622,7 +625,7 @@ class ZK(object):
         if cmd_response.get('status'):
             return True
         else:
-            raise ZKErrorResponse("can't open door")
+            raise ZKErrorResponse("Can't open door")
 
     def __str__(self):
         """ for debug"""
@@ -783,20 +786,20 @@ class ZK(object):
         if self.user_packet_size == 28: #self.firmware == 6:
             if not group_id:
                 group_id = 0
-            try:
-                command_string = pack('HB5s8sIxBHI', uid, privilege, password.encode(), name.encode(), card, int(group_id), 0, int(user_id))
+            try:                                                                                     # for Chinese name
+                command_string = pack('HB5s8sIxBHI', uid, privilege, password.encode(), name.encode('gbk',errors='ignore'), card, int(group_id), 0, int(user_id))
             except Exception as e:
                 if self.verbose: print("s_h Error pack: %s" % e)
                 if self.verbose: print("Error pack: %s" % sys.exc_info()[0])
-                raise ZKErrorResponse("Cant pack user")
-        else:
-            name_pad = name.encode().ljust(24, b'\x00')[:24]
+                raise ZKErrorResponse("Can't pack user")
+        else:                        # for Chinese name 
+            name_pad = name.encode('gbk',errors='ignore').ljust(24, b'\x00')[:24]
             card_str = pack('i', int(card))[:4]
             command_string = pack('HB8s24s4sx7sx24s', uid, privilege, password.encode(), name_pad, card_str, group_id.encode(), user_id.encode())
         response_size = 1024 #TODO check response?
         cmd_response = self.__send_command(command, command_string, response_size)
         if not cmd_response.get('status'):
-            raise ZKErrorResponse("Cant set user")
+            raise ZKErrorResponse("Can't set user")
         self.refresh_data()
         if self.next_uid == uid:
             self.next_uid += 1 # better recalculate again
@@ -818,7 +821,7 @@ class ZK(object):
                 if len(tusers) == 1:
                     user = tusers[0]
                 else:
-                    raise ZKErrorResponse("Cant find user")
+                    raise ZKErrorResponse("Can't find user")
         if isinstance(fingers, Finger):
             fingers = [fingers]
         fpack = ""
@@ -841,7 +844,7 @@ class ZK(object):
         command_string = pack('<IHH', 12,0,8) # ??? write? WRQ user data?
         cmd_response = self.__send_command(command, command_string)
         if not cmd_response.get('status'):
-            raise ZKErrorResponse("Cant save utemp")
+            raise ZKErrorResponse("Can't save utemp")
         self.refresh_data()
 
     def _send_with_buffer(self, buffer):
@@ -854,7 +857,7 @@ class ZK(object):
         command_string = pack('I', size)
         cmd_response = self.__send_command(command, command_string)
         if not cmd_response.get('status'):
-            raise ZKErrorResponse("Cant prepare data")
+            raise ZKErrorResponse("Can't prepare data")
         remain = size % MAX_CHUNK
         packets = (size - remain) // MAX_CHUNK
         start = 0
@@ -870,7 +873,7 @@ class ZK(object):
         if cmd_response.get('status'):
             return True #refres_data (1013)?
         else:
-            raise ZKErrorResponse("Cant send chunk")
+            raise ZKErrorResponse("Can't send chunk")
 
     def delete_user_template(self, uid=0, temp_id=0, user_id=''):
         """
@@ -926,7 +929,7 @@ class ZK(object):
         command_string = pack('h', uid)
         cmd_response = self.__send_command(command, command_string)
         if not cmd_response.get('status'):
-            raise ZKErrorResponse("can't delete user")
+            raise ZKErrorResponse("Can't delete user")
         self.refresh_data()
         if uid == (self.next_uid - 1):
             self.next_uid = uid # quick undo
@@ -956,7 +959,7 @@ class ZK(object):
                 return Finger(uid, temp_id, 1, resp)
             if self.verbose: print ("retry get_user_template")
         else:
-            if self.verbose: print ("can't read/find finger")
+            if self.verbose: print ("Can't read/find finger")
             return None
         #-----------------------------------------------------------------
         if not cmd_response.get('status'):
@@ -1087,7 +1090,7 @@ class ZK(object):
                 uid, privilege, password, name, card, group_id, timezone, user_id = unpack('<HB5s8sIxBhI',userdata.ljust(28, b'\x00')[:28])
                 if uid > max_uid: max_uid = uid
                 password = (password.split(b'\x00')[0]).decode(errors='ignore')
-                name = (name.split(b'\x00')[0]).decode(errors='ignore').strip()
+                name = (name.split(b'\x00')[0]).decode('gbk', errors='ignore').strip()        # for Chinese name
                 #card = unpack('I', card)[0] #or hex value?
                 group_id = str(group_id)
                 user_id = str(user_id)
@@ -1106,7 +1109,7 @@ class ZK(object):
                 #uid = u1 + (u2 * 256)
                 #privilege = int(privilege.encode("hex"), 16)
                 password = (password.split(b'\x00')[0]).decode(errors='ignore')
-                name = (name.split(b'\x00')[0]).decode(errors='ignore').strip()
+                name = (name.split(b'\x00')[0]).decode('gbk', errors='ignore').strip()         # for Chinese name     
                 group_id = (group_id.split(b'\x00')[0]).decode(errors='ignore').strip()
                 user_id = (user_id.split(b'\x00')[0]).decode(errors='ignore')
                 if uid > max_uid: max_uid = uid
@@ -1294,8 +1297,8 @@ class ZK(object):
                 """if len (data) == 5:
                     
                     continue"""
-                if len(data) == 12: #class 1 attendance #TODO: RETEST ZK6
-                    user_id, status, punch, timehex = unpack('<IBB6s', data)
+                if len(data) == 12: #class 1 attendance
+                    user_id, status, match, timehex = unpack('<IBB6s', data)
                     user_id = str(user_id)
                     timestamp = self.__decode_timehex(timehex)
                     tuser = list(filter(lambda x: x.user_id == user_id, users))
@@ -1303,9 +1306,9 @@ class ZK(object):
                         uid = int(user_id)
                     else:
                         uid = tuser[0].uid
-                    yield Attendance(user_id, timestamp, status, punch, uid)#punch test?
+                    yield Attendance(uid, user_id, timestamp, status)
                 elif len(data) == 36: #class 2 attendance
-                    user_id,  status, punch, timehex, res = unpack('<24sBB6sI', data)
+                    user_id,  status, match, timehex, res = unpack('<24sBB6sI', data)
                     user_id = (user_id.split(b'\x00')[0]).decode(errors='ignore')
                     timestamp = self.__decode_timehex(timehex)
                     tuser = list(filter(lambda x: x.user_id == user_id, users))
@@ -1313,7 +1316,7 @@ class ZK(object):
                         uid = int(user_id)
                     else:
                         uid = tuser[0].uid
-                    yield Attendance(user_id, timestamp, status, punch, uid)
+                    yield Attendance(uid, user_id, timestamp, status)
                 else:
                     if self.verbose: print (codecs.encode(data, 'hex')), len(data)
                     yield codecs.encode(data, 'hex')
