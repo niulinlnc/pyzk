@@ -1297,8 +1297,8 @@ class ZK(object):
                 """if len (data) == 5:
                     
                     continue"""
-                if len(data) == 12: #class 1 attendance
-                    user_id, status, match, timehex = unpack('<IBB6s', data)
+                if len(data) == 12: #class 1 attendance #TODO: RETEST ZK6
+                    user_id, status, punch, timehex = unpack('<IBB6s', data)
                     user_id = str(user_id)
                     timestamp = self.__decode_timehex(timehex)
                     tuser = list(filter(lambda x: x.user_id == user_id, users))
@@ -1306,9 +1306,9 @@ class ZK(object):
                         uid = int(user_id)
                     else:
                         uid = tuser[0].uid
-                    yield Attendance(uid, user_id, timestamp, status)
+                    yield Attendance(user_id, timestamp, status, punch, uid)
                 elif len(data) == 36: #class 2 attendance
-                    user_id,  status, match, timehex, res = unpack('<24sBB6sI', data)
+                    user_id,  status, punch, timehex, res = unpack('<24sBB6sI', data)
                     user_id = (user_id.split(b'\x00')[0]).decode(errors='ignore')
                     timestamp = self.__decode_timehex(timehex)
                     tuser = list(filter(lambda x: x.user_id == user_id, users))
@@ -1316,7 +1316,7 @@ class ZK(object):
                         uid = int(user_id)
                     else:
                         uid = tuser[0].uid
-                    yield Attendance(uid, user_id, timestamp, status)
+                    yield Attendance(user_id, timestamp, status, punch, uid)
                 else:
                     if self.verbose: print (codecs.encode(data, 'hex')), len(data)
                     yield codecs.encode(data, 'hex')
