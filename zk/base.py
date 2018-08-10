@@ -6,11 +6,11 @@ from socket import AF_INET, SOCK_DGRAM, SOCK_STREAM, socket, timeout
 from struct import pack, unpack
 import codecs
 
-from zk import const
-from zk.attendance import Attendance
-from zk.exception import ZKErrorResponse, ZKNetworkError
-from zk.user import User
-from zk.finger import Finger
+from . import const
+from .attendance import Attendance
+from .exception import ZKErrorResponse, ZKNetworkError
+from .user import User
+from .finger import Finger
 
 def safe_cast(val, to_type, default=None):
     #https://stackoverflow.com/questions/6330071/safe-casting-in-python
@@ -433,7 +433,7 @@ class ZK(object):
             mac = self.__data.split(b'=', 1)[-1].split(b'\x00')[0]
             return mac.decode()
         else:
-            raise ZKErrorResponse("can't get mac")
+            raise ZKErrorResponse("Can't get mac")
 
     def get_device_name(self):
         '''
@@ -573,7 +573,7 @@ class ZK(object):
             width = self.__data.split(b'\x00')[0]
             return bytearray(width)[0]
         else:
-            raise ZKErrorResponse("can0t get pin width")
+            raise ZKErrorResponse("Can't get pin width")
 
     def free_data(self):
         """ clear buffer"""
@@ -612,7 +612,7 @@ class ZK(object):
                 self.faces_cap = fields[2]
             return True
         else:
-            raise ZKErrorResponse("can't read sizes")
+            raise ZKErrorResponse("Can't read sizes")
 
     def unlock(self, time=3):
         '''
@@ -647,7 +647,7 @@ class ZK(object):
         if cmd_response.get('status'):
             return True
         else:
-            raise ZKErrorResponse("can't restart device")
+            raise ZKErrorResponse("Can't restart device")
 
     def get_time(self):
         """get Device Time"""
@@ -657,7 +657,7 @@ class ZK(object):
         if cmd_response.get('status'):
             return self.__decode_time(self.__data[:4])
         else:
-            raise ZKErrorResponse("can't get time")
+            raise ZKErrorResponse("Can't get time")
 
     def set_time(self, timestamp):
         """ set Device time (pass datetime object)"""
@@ -667,7 +667,7 @@ class ZK(object):
         if cmd_response.get('status'):
             return True
         else:
-            raise ZKErrorResponse("can't set time")
+            raise ZKErrorResponse("Can't set time")
 
     def poweroff(self):
         '''
@@ -680,7 +680,7 @@ class ZK(object):
         if cmd_response.get('status'):
             return True
         else:
-            raise ZKErrorResponse("can't poweroff")
+            raise ZKErrorResponse("Can't poweroff")
 
     def refresh_data(self):
         '''
@@ -691,7 +691,7 @@ class ZK(object):
         if cmd_response.get('status'):
             return True
         else:
-            raise ZKErrorResponse("can't refresh data")
+            raise ZKErrorResponse("Can't refresh data")
 
     def test_voice(self, index=0):
         '''
@@ -1069,7 +1069,7 @@ class ZK(object):
         if cmd_response.get('status'):
             return True
         else:
-            raise ZKErrorResponse("Cant Verify")
+            raise ZKErrorResponse("Can't Verify")
 
     def reg_event(self, flags):
         """ reg events, """
@@ -1077,7 +1077,7 @@ class ZK(object):
         command_string = pack ("I", flags)
         cmd_response = self.__send_command(command, command_string)
         if not cmd_response.get('status'):
-            raise ZKErrorResponse("cant' reg events %i" % flags)
+            raise ZKErrorResponse("Can't reg events %i" % flags)
 
     def set_sdk_build_1(self):
         """ """
@@ -1110,7 +1110,7 @@ class ZK(object):
         self.cancel_capture()
         cmd_response = self.__send_command(command, command_string)
         if not cmd_response.get('status'):
-            raise ZKErrorResponse("Cant Enroll user #%i [%i]" %(uid, temp_id))
+            raise ZKErrorResponse("Can't enroll user #%i [%i]" %(uid, temp_id))
         #retorna rapido toca esperar un reg event
         self.__sock.settimeout(60)# default 1min for finger
         attempts = 3
@@ -1143,10 +1143,10 @@ class ZK(object):
                     res = unpack("H", data_recv.ljust(24,b"\x00")[16:18])[0]
                     if self.verbose: print("res %i" % res)
                     if res == 6 or res == 4:
-                        if self.verbose: print ("posible timeout  o reg Fallido")
+                        if self.verbose: print ("Posible timeout  o reg Fallido")
                         break
                     elif res == 0x64:
-                        if self.verbose: print ("ok, continue?")
+                        if self.verbose: print ("Ok, continue?")
                         attempts -= 1
             else:
                 if len(data_recv) > 8: #not empty
@@ -1156,7 +1156,7 @@ class ZK(object):
                         if self.verbose: print ("posible timeout  o reg Fallido")
                         break
                     elif res == 0x64:
-                        if self.verbose: print ("ok, continue?")
+                        if self.verbose: print ("Ok, continue?")
                         attempts -= 1
         if attempts == 0:
             if self.verbose: print ("esperando 3er regevent")
