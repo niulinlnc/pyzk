@@ -5,6 +5,7 @@ import traceback
 import argparse
 import time
 import datetime
+import codecs
 from builtins import input
 
 sys.path.append("zk")
@@ -14,6 +15,9 @@ from zk.user import User
 from zk.finger import Finger
 from zk.attendance import Attendance
 from zk.exception import ZKErrorResponse, ZKNetworkError
+
+class BasicException(Exception):
+    pass
 
 conn = None
 
@@ -27,12 +31,16 @@ parser.add_argument('-T', '--timeout', type=int,
                     help='Default [10] seconds (0: disable timeout)', default=1)
 parser.add_argument('-P', '--password', type=int,
                     help='Device code/password', default=0)
+parser.add_argument('-b', '--basic', action="store_true",
+                    help='get Basic Information only. (no bulk read, ie: users)')
 parser.add_argument('-f', '--force-udp', action="store_true",
                     help='Force UDP communication')
 parser.add_argument('-v', '--verbose', action="store_true",
                     help='Print debug information')
 parser.add_argument('-t', '--templates', action="store_true",
-                    help='Get templates / fingers')
+                    help='Get templates / fingers (compare bulk and single read)')
+parser.add_argument('-tr', '--templates-raw', action="store_true",
+                    help='Get raw templates (dump templates)')
 parser.add_argument('-r', '--records', action="store_true",
                     help='Get attendance records')
 parser.add_argument('-u', '--updatetime', action="store_true",
@@ -89,6 +97,8 @@ try:
     conn.read_sizes()
     print (conn)
     print ('')
+    if args.basic:
+        raise BasicException("Basic Info... Done!")
     print ('--- Get User ---')
     inicio = time.time()
     users = conn.get_users()
@@ -171,23 +181,34 @@ try:
         conn.refresh_data()
     #print ("Voice Test ...")
     #conn.test_voice(10)
-    if args.templates:
+    if args.templates or args.templates_raw:
         print ("Read Templates...")
         inicio = time.time()
         templates = conn.get_templates()
         final = time.time()
         print ('    took {:.3f}[s]'.format(final - inicio))
-        print ('now checking individually...')
-        for tem in templates:
-            tem2 =conn.get_user_template(tem.uid,tem.fid)
-            if tem2 is None:
-                print ("bulk! %s" % tem)
-            elif tem == tem2: # compare with alternative method
-                print ("OK! %s" % tem)
-            else:
-                print ("dif-1 %s" % tem)
-                print ("dif-2 %s" % tem2)
-        print ('    took {:.3f}[s]'.format(final - inicio))
+        if args.templates:
+            print ('now checking individually...')
+            i = 0
+            for tem in templates:
+                i += 1
+                tem2 =conn.get_user_template(tem.uid,tem.fid)
+                if tem2 is None:
+                    print ("%i: bulk! %s" % (i, tem))
+                elif tem == tem2: # compare with alternative method
+                    print ("%i: OK! %s" % (i, tem))
+                else:
+                    print ("%i: dif-1 %s" % (i, tem))
+                    print ("%i: dif-2 %s" % (i, tem2))
+            print ('    took {:.3f}[s]'.format(final - inicio))
+        else:
+            print ('template dump')
+            i = 0
+            for tem in templates:
+                i += 1
+                print ("%i:  %s" % (i, tem.dump()))
+            print ('    took {:.3f}[s]'.format(final - inicio))
+
     if args.records:
         print ("Read Records...")
         inicio = time.time()
@@ -196,7 +217,7 @@ try:
         print ('    took {:.3f}[s]'.format(final - inicio))
         i = 0
         for att in attendance:
-            i +=1
+            i += 1
             print ("ATT {:>6}: uid:{:>3}, user_id:{:>8} t: {}, s:{} p:{}".format(i, att.uid, att.user_id, att.timestamp, att.status, att.punch))
         print ('    took {:.3f}[s]'.format(final - inicio))
     print ('')
@@ -223,6 +244,8 @@ try:
         print('')
         print('--- capture End!---')
     print ('')
+except BasicException as e:
+    print (e)
 except Exception as e:
     print ("Process terminate : {}".format(e))
     print ("Error: %s" % sys.exc_info()[0])
