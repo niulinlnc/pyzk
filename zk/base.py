@@ -109,6 +109,7 @@ class ZK(object):
         self.ommit_ping = ommit_ping
         self.verbose = verbose
         self.encoding = encoding
+        User.encoding = encoding
         self.tcp = False
         self.users = 0
         self.fingers = 0
@@ -140,9 +141,11 @@ class ZK(object):
         """ based on self.tcp"""
         if self.tcp:
             self.__sock = socket(AF_INET, SOCK_STREAM)
+            self.__sock.settimeout(self.__timeout)
             self.__sock.connect_ex(self.__address)
         else:
             self.__sock = socket(AF_INET, SOCK_DGRAM)
+            self.__sock.settimeout(self.__timeout)
 
     def __create_tcp_top(self, packet):
         """ witch the complete packet set top header """
@@ -394,7 +397,7 @@ class ZK(object):
         return the serial number
         '''
         command = const.CMD_OPTIONS_RRQ
-        command_string = b'~SerialNumber'
+        command_string = b'~SerialNumber\x00'
         response_size = 1024
         cmd_response = self.__send_command(command, command_string, response_size)
         if cmd_response.get('status'):
@@ -409,7 +412,7 @@ class ZK(object):
         return the platform name
         '''
         command = const.CMD_OPTIONS_RRQ
-        command_string = b'~Platform'
+        command_string = b'~Platform\x00'
         response_size = 1024
 
         cmd_response = self.__send_command(command, command_string, response_size)
@@ -425,7 +428,7 @@ class ZK(object):
         return the mac
         '''
         command = const.CMD_OPTIONS_RRQ
-        command_string = b'MAC'
+        command_string = b'MAC\x00'
         response_size = 1024
 
         cmd_response = self.__send_command(command, command_string, response_size)
@@ -440,7 +443,7 @@ class ZK(object):
         return the device name
         '''
         command = const.CMD_OPTIONS_RRQ
-        command_string = b'~DeviceName'
+        command_string = b'~DeviceName\x00'
         response_size = 1024
 
         cmd_response = self.__send_command(command, command_string, response_size)
@@ -456,7 +459,7 @@ class ZK(object):
         return the face version
         '''
         command = const.CMD_OPTIONS_RRQ
-        command_string = b'ZKFaceVersion'
+        command_string = b'ZKFaceVersion\x00'
         response_size = 1024
 
         cmd_response = self.__send_command(command, command_string, response_size)
@@ -471,7 +474,7 @@ class ZK(object):
         return the fingerprint version
         '''
         command = const.CMD_OPTIONS_RRQ
-        command_string = b'~ZKFPVersion'
+        command_string = b'~ZKFPVersion\x00'
         response_size = 1024
 
         cmd_response = self.__send_command(command, command_string, response_size)
@@ -481,13 +484,20 @@ class ZK(object):
             return safe_cast(response, int, 0) if response else 0
         else:
             return None
-
+    def _clear_error(self, command_string=b''):
+        """ clear ACK_error """
+        cmd_response = self.__send_command(const.CMD_ACK_ERROR, command_string, 1024)
+        # cmd_response['code'] shuld be CMD_ACK_UNKNOWN
+        cmd_response = self.__send_command(const.CMD_ACK_UNKNOWN, command_string, 1024)
+        cmd_response = self.__send_command(const.CMD_ACK_UNKNOWN, command_string, 1024)
+        cmd_response = self.__send_command(const.CMD_ACK_UNKNOWN, command_string, 1024)
+        
     def get_extend_fmt(self):
         '''
         determine extend fmt
         '''
         command = const.CMD_OPTIONS_RRQ
-        command_string = b'~ExtendFmt'
+        command_string = b'~ExtendFmt\x00'
         response_size = 1024
 
         cmd_response = self.__send_command(command, command_string, response_size)
@@ -496,14 +506,16 @@ class ZK(object):
             #definitivo? seleccionar firmware aqui?
             return safe_cast(fmt, int, 0) if fmt else 0
         else:
-            raise ZKErrorResponse("Can't read extend fmt")
+            self._clear_error(command_string)
+            return None
+            #raise ZKErrorResponse("Can't read extend fmt")
 
     def get_user_extend_fmt(self):
         '''
         determine user extend fmt
         '''
         command = const.CMD_OPTIONS_RRQ
-        command_string = b'~UserExtFmt'
+        command_string = b'~UserExtFmt\x00'
         response_size = 1024
 
         cmd_response = self.__send_command(command, command_string, response_size)
@@ -512,6 +524,7 @@ class ZK(object):
             #definitivo? seleccionar firmware aqui?
             return safe_cast(fmt, int, 0) if fmt else 0
         else:
+            self._clear_error(command_string)
             return None
 
     def get_face_fun_on(self):
@@ -519,15 +532,16 @@ class ZK(object):
         determine extend fmt
         '''
         command = const.CMD_OPTIONS_RRQ
-        command_string = b'FaceFunOn'
+        command_string = b'FaceFunOn\x00'
         response_size = 1024
 
         cmd_response = self.__send_command(command, command_string, response_size)
         if cmd_response.get('status'):
             response = (self.__data.split(b'=', 1)[-1].split(b'\x00')[0])
             #definitivo? seleccionar firmware aqui?
-            return int(response) if response else 0
+            return safe_cast(response, int ,0) if response else 0
         else:
+            self._clear_error(command_string)
             return None
 
     def get_compat_old_firmware(self):
@@ -535,7 +549,7 @@ class ZK(object):
         determine old firmware
         '''
         command = const.CMD_OPTIONS_RRQ
-        command_string = b'CompatOldFirmware'
+        command_string = b'CompatOldFirmware\x00'
         response_size = 1024
 
         cmd_response = self.__send_command(command, command_string, response_size)
@@ -544,19 +558,20 @@ class ZK(object):
             #definitivo? seleccionar firmware aqui?
             return safe_cast(response, int, 0) if response else 0
         else:
+            self._clear_error(command_string)
             return None
 
     def get_network_params(self):
         ip = self.__address[0]
         mask = b''
         gate = b''
-        cmd_response = self.__send_command(const.CMD_OPTIONS_RRQ, b'IPAddress', 1024)
+        cmd_response = self.__send_command(const.CMD_OPTIONS_RRQ, b'IPAddress\x00', 1024)
         if cmd_response.get('status'):
             ip = (self.__data.split(b'=', 1)[-1].split(b'\x00')[0])
-        cmd_response = self.__send_command(const.CMD_OPTIONS_RRQ, b'NetMask', 1024)
+        cmd_response = self.__send_command(const.CMD_OPTIONS_RRQ, b'NetMask\x00', 1024)
         if cmd_response.get('status'):
             mask = (self.__data.split(b'=', 1)[-1].split(b'\x00')[0])
-        cmd_response = self.__send_command(const.CMD_OPTIONS_RRQ, b'GATEIPAddress', 1024)
+        cmd_response = self.__send_command(const.CMD_OPTIONS_RRQ, b'GATEIPAddress\x00', 1024)
         if cmd_response.get('status'):
             gate = (self.__data.split(b'=', 1)[-1].split(b'\x00')[0])
         return {'ip': ip.decode(), 'mask': mask.decode(), 'gateway': gate.decode()}
@@ -773,14 +788,18 @@ class ZK(object):
             return False #some devices doesn't support sound
             #raise ZKErrorResponse("can't test voice")
 
-    def set_user(self, uid, name, privilege=0, password='', group_id='', user_id='', card=0):
+    def set_user(self, uid=None, name='', privilege=0, password='', group_id='', user_id='', card=0):
         '''
         create or update user by uid
         '''
         command = const.CMD_USER_WRQ
+        if uid is None:
+            uid = self.next_uid # keeps uid=0
+            if not user_id:
+                user_id = self.next_user_id # else...
         if not user_id:
             user_id = str(uid) #ZK6 needs uid2 == uid
-        #uid = chr(uid % 256) + chr(uid >> 8)
+        #TODO: check what happens if name is missing...
         if privilege not in [const.USER_DEFAULT, const.USER_ADMIN]:
             privilege = const.USER_DEFAULT
         privilege = int(privilege)
@@ -825,8 +844,8 @@ class ZK(object):
                     raise ZKErrorResponse("Can't find user")
         if isinstance(fingers, Finger):
             fingers = [fingers]
-        fpack = ""
-        table = ""
+        fpack = b""
+        table = b""
         fnum = 0x10 # possibly flag
         tstart = 0
         for finger in fingers:
@@ -965,13 +984,16 @@ class ZK(object):
 
     def get_templates(self):
         """ return array of all fingers """
+        self.read_sizes() # last update
+        if self.fingers == 0: #lazy
+            return []
         templates = []
         templatedata, size = self.read_with_buffer(const.CMD_DB_RRQ, const.FCT_FINGERTMP)
         if size < 4:
             if self.verbose: print("WRN: no user data") # debug
             return []
         total_size = unpack('i', templatedata[0:4])[0]
-        print ("get template total size {}, size {} len {}".format(total_size, size, len(templatedata)))
+        if self.verbose: print ("get template total size {}, size {} len {}".format(total_size, size, len(templatedata)))
         templatedata = templatedata[4:] #total size not used
         # ZKFinger VX10.0 the only finger firmware tested
         while total_size:
@@ -1282,7 +1304,8 @@ class ZK(object):
             data.append(resp)
             size -= len(resp)
             if self.verbose: print ("new tcp DATA packet to fill misssing {}".format(size))
-            data_recv = bh + self.__sock.recv(size) #ideal limit?
+            data_recv = bh + self.__sock.recv(size + 16 ) #ideal limit + header
+            if self.verbose: print ("new tcp DATA starting with {} bytes".format(len(data_recv)))
             resp, bh = self.__recieve_tcp_data(data_recv, size)
             data.append(resp)
             if self.verbose: print ("for misssing {} recieved {} with extra {}".format(size, len(resp), len(bh)))
@@ -1326,6 +1349,7 @@ class ZK(object):
             data_recv = self.__sock.recv(size) #ideal limit?
             recieved = len(data_recv)
             if self.verbose: print ("partial recv {}".format(recieved))
+            if recieved < 100 and self.verbose: print ("   recv {}".format(codecs.encode(data_recv, 'hex')))
             data.append(data_recv) # w/o tcp and header
             size -= recieved
             if self.verbose: print ("still need {}".format(size))
@@ -1334,17 +1358,32 @@ class ZK(object):
     def __recieve_chunk(self):
         """ recieve a chunk """
         if self.__response == const.CMD_DATA: # less than 1024!!!
-            if self.verbose: print ("_rc len is {}".format(len(self.__data)))
-            return self.__data #without headers
+            if self.tcp: #MUST CHECK TCP SIZE
+                if self.verbose: print ("_rc_DATA! is {} bytes, tcp length is {}".format(len(self.__data), self.__tcp_length))
+                if len(self.__data) < (self.__tcp_length - 8):
+                    need = (self.__tcp_length - 8) - len(self.__data)
+                    if self.verbose: print ("need more data: {}".format(need))
+                    more_data = self.__recieve_raw_data(need)
+                    return b''.join([self.__data, more_data])
+                else: #enough data
+                    if self.verbose: print ("Enough data")
+                    return self.__data
+            else: #UDP
+                if self.verbose: print ("_rc len is {}".format(len(self.__data)))
+                return self.__data #without headers
         elif self.__response == const.CMD_PREPARE_DATA:
             data = []
-            size = self.__get_data_size()
+            size = self.__get_data_size() # from prepare data response...
             if self.verbose: print ("recieve chunk: prepare data size is {}".format(size))
             if self.tcp:
+                if self.verbose: print ("recieve chunk: len data is {}".format(len(self.__data)))
+                #ideally 8 bytes of PREPARE_DATA only...
+                #but sometimes it comes with data...
+
                 if len(self.__data) >= (8 + size): #prepare data with actual data! should be 8+size+32
-                    data_recv = self.__data[8:] # test, maybe -32
+                    data_recv = self.__data[8:] #  no need for more data! test, maybe -32
                 else:
-                    data_recv = self.__sock.recv(size + 32) #could have two commands
+                    data_recv = self.__data[8:] + self.__sock.recv(size + 32) #could have two commands
                 resp, broken_header = self.__recieve_tcp_data(data_recv, size)
                 data.append(resp)
                 # get CMD_ACK_OK
@@ -1421,8 +1460,20 @@ class ZK(object):
             raise ZKErrorResponse("RWB Not supported")
         if cmd_response['code'] == const.CMD_DATA:
             #direct!!! small!!!
-            size = len(self.__data)
-            return self.__data, size
+            if self.tcp: #MUST CHECK TCP SIZE
+                if self.verbose: print ("DATA! is {} bytes, tcp length is {}".format(len(self.__data), self.__tcp_length))
+                if len(self.__data) < (self.__tcp_length - 8):
+                    need = (self.__tcp_length - 8) - len(self.__data)
+                    if self.verbose: print ("need more data: {}".format(need))
+                    more_data = self.__recieve_raw_data(need)
+                    return b''.join([self.__data, more_data]), len(self.__data) + len(more_data)
+                else: #enough data
+                    if self.verbose: print ("Enough data")
+                    size = len(self.__data)
+                    return self.__data, size
+            else: #udp is direct
+                size = len(self.__data)
+                return self.__data, size
         #else ACK_OK with size
         size = unpack('I', self.__data[1:5])[0]  # extra info???
         if self.verbose: print ("size fill be %i" % size)

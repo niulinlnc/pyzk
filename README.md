@@ -7,10 +7,22 @@ pyzk is an unofficial library of zksoftware the fingerprint attendance machine.
 [![Build Status](https://travis-ci.org/kurenai-ryu/pyzk.svg?branch=master)](https://travis-ci.org/kurenai-ryu/pyzk)
 
 replace original pyzk, if it was installed
-`pip install -U git+https://github.com/kurenai-ryu/pyzk.git`
+
+```sh
+pip install -U git+https://github.com/kurenai-ryu/pyzk.git
+```
+
+or using pipenv:
+
+```sh
+pipenv install git+https://gith.com/kurenai-ryu/pyzk#egg=pyzk
+```
 
 or clone and execute:
-`python setup.py install`
+
+```sh
+python setup.py install
+```
 
 or in your project, append the path of this project
 
@@ -68,21 +80,21 @@ finally:
 
 * Connect/Disconnect
 
-```
+```python
 conn = zk.connect()
 conn.disconnect()
 ```
 
 * Disable/Enable Connected Device
 
-```
+```python
 conn.disable_device()
 conn.enable_device()
 ```
 
 * Get and Set Time
 
-```
+```python
 from datetime import datetime
 
 zktime = conn.get_time()
@@ -95,7 +107,7 @@ conn.set_time(newtime)
 
 * Ger Firmware Version and extra information
 
-```
+```python
 conn.get_firmware_version()
 conn.get_serialnumber()
 conn.get_platform()
@@ -198,7 +210,7 @@ for attendance in conn.live_capture():
     # and disables live capture
 ```
 
-Test Machine
+**Test Machine**
 
 ```sh
 usage: ./test_machine.py [-h] [-a ADDRESS] [-p PORT] [-T TIMEOUT] [-P PASSWORD]
@@ -235,8 +247,39 @@ optional arguments:
   -F FINGER, --finger FINGER
                         Finger for enroll (fid=0)
 
-
 ```
+
+**Backup/Restore (Users and fingers only!!!)** *(WARNING! destructive test! do it at your own risk!)*
+
+```sh
+usage: ./test_backup_restore.py [-h] [-a ADDRESS] [-p PORT] [-T TIMEOUT]
+                              [-P PASSWORD] [-f] [-v] [-r]
+                              [filename]
+
+ZK Basic Backup/Restore Tool
+
+positional arguments:
+  filename              backup filename (default [serialnumber].bak)
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -a ADDRESS, --address ADDRESS
+                        ZK device Address [192.168.1.201]
+  -p PORT, --port PORT  ZK device port [4370]
+  -T TIMEOUT, --timeout TIMEOUT
+                        Default [10] seconds (0: disable timeout)
+  -P PASSWORD, --password PASSWORD
+                        Device code/password
+  -f, --force-udp       Force UDP communication
+  -v, --verbose         Print debug information
+  -E, --erase           clean the device after writting backup!
+  -r, --restore         Restore from backup
+  -c, --clear-attendance
+                        On Restore, also clears the attendance [default keep
+                        attendance]
+```
+
+to restore on a different device, make sure to specify the `filename`. on restoring, it asks for the serial number of the destination device (to make sure it was correct, as it deletes all data) WARNING. there is no way to restore attendance data, you can keep it or clear it, but once cleared, there is no way to restore it. 
 
 # Compatible devices
 
@@ -272,6 +315,10 @@ DeviceName : iClock260
 Firmware Version : Ver 6.60 Nov 6 2017 (remote tested with correct results)
 Platform : ZMM220_TFT
 DeviceName : (unknown device) (broken info but at least the important data was read)
+
+Firmware Version : Ver 6.60 Jun 9 2017
+Platform : JZ4725_TFT
+DeviceName : K20 (latest checked correctly!)
 ```
 
 
@@ -286,9 +333,17 @@ DeviceName : iClock260
 Firmware Version : Ver 6.60 Jun 16 2015
 Platform : JZ4725_TFT
 DeviceName : K14 (not tested, but same behavior like the other one)
+
+
+
+Firmware Version : Ver 6.60 Jun 5 2015
+Platform : ZMM200_TFT
+DeviceName : iClock3000/ID (Active testing! latest fix)
+
+Firmware Version : Ver 6.70 Jul 12 2013
+Platform : ZEM600_TFT
+DeviceName : iClock880-H/ID (Active testing! latest fix)
 ```
-
-
 
 ### Not Working (needs more tests, more information)
 
@@ -300,11 +355,11 @@ DeviceName : iClock260 (no capture data - probably similar problem as the latest
 
 If you have another version tested and it worked, please inform me to update this list!
 
+# Related Project
 
+* [zkcluster](https://github.com/kurenai-ryu/zkcluster/ "zkcluster project") is a django apps to manage multiple fingerprint devices. (Initial support form the [original project](https://github.com/fananimi/zkcluster/))
 
 # Related Project (TODO: check compatibility with this fork)
-
-* [zkcluster](https://github.com/fananimi/zkcluster/ "zkcluster project") is a django apps to manage multiple fingerprint devices.
 
 * [Driji](https://github.com/fananimi/driji/ "Driji project") is an attendance apps based fingerprint for school
 

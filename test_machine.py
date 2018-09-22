@@ -21,14 +21,13 @@ class BasicException(Exception):
 
 conn = None
 
-
 parser = argparse.ArgumentParser(description='ZK Basic Reading Tests')
 parser.add_argument('-a', '--address', 
                     help='ZK device Address [192.168.1.201]', default='192.168.1.201')
 parser.add_argument('-p', '--port', type=int,
                     help='ZK device port [4370]', default=4370)
 parser.add_argument('-T', '--timeout', type=int,
-                    help='Default [10] seconds (0: disable timeout)', default=1)
+                    help='Default [10] seconds (0: disable timeout)', default=10)
 parser.add_argument('-P', '--password', type=int,
                     help='Device code/password', default=0)
 parser.add_argument('-b', '--basic', action="store_true",
@@ -41,6 +40,8 @@ parser.add_argument('-t', '--templates', action="store_true",
                     help='Get templates / fingers (compare bulk and single read)')
 parser.add_argument('-tr', '--templates-raw', action="store_true",
                     help='Get raw templates (dump templates)')
+parser.add_argument('-ti', '--templates-index', type=int,
+                    help='Get specific template', default=0)
 parser.add_argument('-r', '--records', action="store_true",
                     help='Get attendance records')
 parser.add_argument('-u', '--updatetime', action="store_true",
@@ -167,6 +168,7 @@ try:
             conn.save_user_template(zk_user)# forced creation
             args.enrolluser = uid
         conn.refresh_data()
+
     if args.enrolluser:
         uid = int(args.enrolluser)
         print ('--- Enrolling User #{} ---'.format(uid))
@@ -181,7 +183,14 @@ try:
         conn.refresh_data()
     #print ("Voice Test ...")
     #conn.test_voice(10)
-    if args.templates or args.templates_raw:
+    if args.templates_index:
+        print ("Read Single template... {}".format(args.templates_index))
+        inicio = time.time()
+        template = conn.get_user_template(args.templates_index, args.finger)
+        final = time.time()
+        print ('    took {:.3f}[s]'.format(final - inicio))
+        print (" single! {}".format(template))
+    elif args.templates or args.templates_raw:
         print ("Read Templates...")
         inicio = time.time()
         templates = conn.get_templates()
@@ -246,6 +255,7 @@ try:
     print ('')
 except BasicException as e:
     print (e)
+    print ('')
 except Exception as e:
     print ("Process terminate : {}".format(e))
     print ("Error: %s" % sys.exc_info()[0])
