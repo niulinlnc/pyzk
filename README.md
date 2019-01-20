@@ -42,6 +42,7 @@ Complete documentation of the original project can be found at [Readthedocs](htt
 Just create a ZK object and you will be ready to call api.
 
 * Basic Usage
+
 ```python
 from zk import ZK, const
 
@@ -149,7 +150,6 @@ conn.delete_user(uid=1)
 ```
 there is also an `enroll_user()` (but it doesn't work with some tcp ZK8 devices)
 
-
 * Fingerprints
 
 ```python
@@ -162,11 +162,15 @@ fingers = conn.get_templates()
 # pass a User object and a list of finger (max 10) to save
 
 conn.save_user_template(user, [fing1 ,fing2])
+
+* Remote Fingerprint Enrollment
+```
+zk.enroll_user('23')
 ```
 
 
 * Attendance Record
-```python
+​```python
 # Get attendances (will return list of Attendance object)
 attendances = conn.get_attendance()
 # Clear attendances record
@@ -319,6 +323,10 @@ DeviceName : (unknown device) (broken info but at least the important data was r
 Firmware Version : Ver 6.60 Jun 9 2017
 Platform : JZ4725_TFT
 DeviceName : K20 (latest checked correctly!)
+
+Firmware Version : Ver 6.60 Aug 23 2014 
+Platform : ZEM600_TFT
+DeviceName : VF680 (face device only, but we read the user and attendance list!)
 ```
 
 
@@ -356,12 +364,10 @@ DeviceName : iClock260 (no capture data - probably similar problem as the latest
 If you have another version tested and it worked, please inform me to update this list!
 
 # Related Project
-
-* [zkcluster](https://github.com/kurenai-ryu/zkcluster/ "zkcluster project") is a django apps to manage multiple fingerprint devices. (Initial support form the [original project](https://github.com/fananimi/zkcluster/))
+ * [zkcluster](https://github.com/kurenai-ryu/zkcluster/ "zkcluster project") is a django apps to manage multiple fingerprint devices. (Initial support form the [original project](https://github.com/fananimi/zkcluster/))
 
 # Related Project (TODO: check compatibility with this fork)
-
-* [Driji](https://github.com/fananimi/driji/ "Driji project") is an attendance apps based fingerprint for school
+ * [Driji](https://github.com/fananimi/driji/ "Driji project") is an attendance apps based fingerprint for school
 
 # Todo
 
